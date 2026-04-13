@@ -59,6 +59,15 @@ clean:
 	@rm -rf .terraform terraform.tfstate* tfplan .terraform.lock.hcl
 	@echo "Cleaned up Terraform files"
 
+.PHONY: bake-image
+bake-image:
+	@echo "Bake a Debian image with preinstalled containerd and kubeadm tools"
+	@if [ -z "$(IMAGE)" ]; then \
+		echo "Set IMAGE=/path/to/debian.qcow2 make bake-image"; exit 1; \
+	fi
+	@mkdir -p ../output || true
+	@scripts/bake-image.sh $(IMAGE) --output debian-k8s-template
+
 check-vars:
 	@echo "Checking if terraform.tfvars exists..."
 	@if [ ! -f terraform.tfvars ]; then \
