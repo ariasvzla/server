@@ -71,6 +71,53 @@ terraform apply tfplan
 
 Wait for all VMs to be created and cloud-init to complete.
 
+## GitHub Actions CI/CD
+
+This repository includes automated GitHub Actions workflows for Terraform validation and deployment.
+
+### Workflows
+
+1. **terraform-ci.yml** (Validation & Testing)
+   - Triggers on PRs and pushes to develop/main
+   - Validates Terraform syntax
+   - Checks code formatting
+   - Runs security scans with Checkov
+   - Generates plan for PRs
+
+2. **terraform-apply.yml** (Production Deployment)
+   - Triggers automatically on merge to main
+   - Requires production environment approval
+   - Plans and applies Terraform changes
+   - Creates GitHub deployment tracking
+
+### Setup GitHub Actions Secrets
+
+Add these secrets to your GitHub repository (Settings → Secrets and variables → Actions):
+
+```
+PROXMOX_API_URL         - Proxmox API endpoint (https://your-proxmox:8006/api2/json)
+PROXMOX_API_TOKEN_ID    - Token ID (format: user@realm!token_name)
+PROXMOX_API_TOKEN       - Token secret
+PROXMOX_NODE            - Target node name
+```
+
+### Local Development
+
+Run validation locally before pushing:
+
+```bash
+cd Templates
+
+# Format check
+terraform fmt -recursive
+
+# Validate
+terraform validate
+
+# Plan (requires credentials or mocked)
+terraform plan
+```
+
 ## Post-Deployment
 
 ### 1. Verify VM Creation

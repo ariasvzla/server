@@ -1,0 +1,124 @@
+name: Terraform CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'Templates/**'
+      - '.github/workflows/terraform-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Templates/**'
+
+env:
+  TF_VERSION: 1.0
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init (validate)
+        run: terraform init -backend=false
+        working-directory: Templates
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: Templates
+
+  format:
+    name: Check Terraform Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Check Terraform Format
+        run: terraform fmt -check -recursive
+        working-directory: Templates
+
+  plan:
+    name: Plan Terraform
+    runs-on: ubuntu-latest
+    needs: [validate, format]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: Templates
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -no-color
+        working-directory: Templates
+        continue-on-error: true
+        env:
+          TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
+          TF_VAR_proxmox_api_token_id: ${{ secrets.PROXMOX_API_TOKEN_ID }}
+          TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
+          TF_VAR_proxmox_node: ${{ secrets.PROXMOX_NODE }}
+
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const commentBody = `## Terraform Plan
+            
+            \`\`\`
+            Plan generated for Templates directory
+            \`\`\`
+            
+            **Note:** Full plan details require Proxmox credentials. Review locally with:
+            \`\`\`bash
+            cd Templates
+            terraform plan
+            \`\`\`
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov security scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: Templates
+          framework: terraform
+          quiet: false
+          soft_fail: true
