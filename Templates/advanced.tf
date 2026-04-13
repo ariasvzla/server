@@ -10,11 +10,10 @@ locals {
   }
 }
 
-# Data source to get template information (optional validation)
-data "proxmox_vm_qemu" "template" {
-  vmid = 0
-  name = var.vm_template_name
-}
+# (Removed) data source: the Proxmox provider doesn't expose a
+# `proxmox_vm_qemu` data source. If you need to validate the template
+# exists, perform that check outside Terraform or adjust to an available
+# data source from the provider.
 
 # Local file to save kubeadm join command after initialization
 resource "local_file" "kubeadm_join_script" {

@@ -35,9 +35,9 @@ resource "proxmox_vm_qemu" "k8s_control_plane" {
   # Cloud-init Configuration
   ciuser            = var.cloud_init_user
   cipassword        = var.cloud_init_password
-  sshkeys           = var.ssh_public_keys
+  sshkeys           = join("\n", var.ssh_public_keys)
   ipconfig0         = "ip=${cidrhost(var.network_subnet, 20 + count.index)}/24,gw=${var.gateway}"
-  nameserver        = var.nameservers
+  nameserver        = join(",", var.nameservers)
   searchdomain      = var.domain
 
   # Resource pool
@@ -113,9 +113,9 @@ resource "proxmox_vm_qemu" "k8s_worker" {
   # Cloud-init Configuration
   ciuser     = var.cloud_init_user
   cipassword = var.cloud_init_password
-  sshkeys    = var.ssh_public_keys
+  sshkeys    = join("\n", var.ssh_public_keys)
   ipconfig0  = "ip=${cidrhost(var.network_subnet, 30 + var.control_plane_count + count.index)}/24,gw=${var.gateway}"
-  nameserver = var.nameservers
+  nameserver = join(",", var.nameservers)
   searchdomain = var.domain
 
   # Resource pool
